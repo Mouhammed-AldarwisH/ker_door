@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مراقبة الاستراحة</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #f4f4f9; padding: 20px; direction: rtl; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .status-card { padding: 20px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 18px; font-weight: bold; }
+        .online { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .offline { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .door-open { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .door-closed { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        h3 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 25px; }
+        ul { list-style: none; padding: 0; }
+        li { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; display: flex; justify-content: space-between; }
+        .time { color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="text-align: center; margin-bottom: 25px;">نظام مراقبة الاستراحة</h2>
+
+    <div id="power-status" class="status-card">جاري جلب حالة الكهرباء...</div>
+    <div id="door-status" class="status-card">جاري جلب حالة الباب...</div>
+
+    <h3>آخر الأحداث المسجلة</h3>
+    <ul id="events-list">
+        <li>جاري تحميل السجل التاريخي...</li>
+    </ul>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
