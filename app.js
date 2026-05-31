@@ -4,7 +4,6 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 window.onload = () => {
     fetchData();
-    // جلب تلقائي كل 10 ثوانٍ لتحديث البطاقات الرئيسية والسجل القصير
     setInterval(fetchData, 10000);
     
     if ('serviceWorker' in navigator) {
@@ -12,9 +11,12 @@ window.onload = () => {
             .then(() => console.log('تم تسجيل Service Worker بنجاح'))
             .catch(err => console.error('فشل تسجيل Service Worker:', err));
     }
+
+    if ('Notification' in window && Notification.permission === 'default') {
+        document.getElementById('notify-btn').style.display = 'block';
+    }
 };
 
-// 1. وظيفة الجلب المستمر للبطاقات الرئيسية وآخر 5 أحداث
 async function fetchData() {
     try {
         const { data: deviceData } = await supabaseClient
@@ -79,22 +81,18 @@ async function fetchData() {
     }
 }
 
-// 2. وظيفة جلب وعرض القراءات الكاملة داخل الجدول التاريخي عند الضغط على الأزرار
 async function viewFullHistory(type) {
     const historySection = document.getElementById('history-section');
     const historyTitle = document.getElementById('history-title');
     const tableBody = document.getElementById('history-table-body');
     
-    // إظهار قسم السجل وتجهيز شاشة الانتظار
     historySection.classList.remove('hidden');
-    tableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:10px;">جاري تحميل السجل الكامل...</td></tr>';
+    tableBody.innerHTML = '<tr><td style="text-align:center; padding:10px;">جاري تحميل السجل الكامل...</td></tr>';
 
-    // تحديد الجدول المستهدف بناءً على نوع الزر المكبوس
     const tableName = type === 'door' ? 'door_logs' : 'power_logs';
     historyTitle.textContent = type === 'door' ? 'سجل حركة الباب الكامل 🚪' : 'سجل حالات الكهرباء الكامل ⚡';
 
     try {
-        // جلب جميع البيانات مرتبة من الأحدث إلى الأقدم
         const { data, error } = await supabaseClient
             .from(tableName)
             .select('*')
@@ -109,7 +107,6 @@ async function viewFullHistory(type) {
                 const tr = document.createElement('tr');
                 let detailText = '';
 
-                // صياغة النص بناءً على نوع البيانات المجلوبة
                 if (type === 'door') {
                     detailText = row.action === 'opened' ? 'تم فتح الباب 🚪' : 'تم إغلاق الباب 🔒';
                 } else {
@@ -120,31 +117,35 @@ async function viewFullHistory(type) {
                 const eventDate = new Date(row.logged_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
 
                 tr.innerHTML = `
-                    <td><b>${detailText}</b></td>
-                    <td class="time">${eventDate} في ${eventTime}</td>
+                    <td>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <b>${detailText}</b>
+                            <span class="time" style="font-size: 12px; color: #8e8e93;">${eventDate} - ${eventTime}</span>
+                        </div>
+                    </td>
                 `;
                 tableBody.appendChild(tr);
             });
         } else {
-            tableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:10px;">لا توجد سجلات محفوظة في هذا الجدول بعد.</td></tr>';
+            tableBody.innerHTML = '<tr><td style="text-align:center; padding:10px;">لا توجد سجلات محفوظة.</td></tr>';
         }
     } catch (err) {
         console.error("خطأ في تحميل السجل التاريخي الكامل:", err);
-        tableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:10px; color:red;">فشل جلب البيانات، تحقق من تفعيل RLS للجدول.</td></tr>';
-    }
-}
-// التحقق من حالة الإشعارات عند تحميل الصفحة
-if ('Notification' in window) {
-    if (Notification.permission === 'default') {
-        // إظهار الزر إذا لم يوافق أو يرفض المستخدم بعد
-        document.getElementById('notify-btn').style.display = 'block';
+        tableBody.innerHTML = '<tr><td style="text-align:center; padding:10px; color:red;">فشل جلب البيانات، تحقق من تفعيل RLS للجدول.</td></tr>';
     }
 }
 
-// دالة طلب صلاحية الإشعارات المرتبطة بالزر
 function requestNotificationPermission() {
     if (!('Notification' in window)) {
         alert('متصفحك لا يدعم الإشعارات.');
+        return;
+    }
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
+    if (isIOS && !isStandalone) {
+        alert('ملاحظة أمنية من Apple: لتفعيل الإشعارات، يجب عليك الضغط على زر "مشاركة" بالأسفل واختيار "إضافة إلى الشاشة الرئيسية" (Add to Home Screen)، ثم افتح التطبيق من الشاشة لتفعيل الإشعارات.');
         return;
     }
 
@@ -152,9 +153,8 @@ function requestNotificationPermission() {
         if (permission === 'granted') {
             document.getElementById('notify-btn').style.display = 'none';
             alert('تم تفعيل الإشعارات بنجاح!');
-            // سيتم وضع كود الاشتراك في خدمة الـ Push لاحقاً هنا
         } else {
-            alert('تم رفض الإشعارات. يمكنك تفعيلها لاحقاً من إعدادات المتصفح.');
+            alert('تم رفض الإشعارات. يمكنك تفعيلها لاحقاً من إعدادات النظام.');
         }
     });
 }
