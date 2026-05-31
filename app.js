@@ -133,3 +133,28 @@ async function viewFullHistory(type) {
         tableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:10px; color:red;">فشل جلب البيانات، تحقق من تفعيل RLS للجدول.</td></tr>';
     }
 }
+// التحقق من حالة الإشعارات عند تحميل الصفحة
+if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+        // إظهار الزر إذا لم يوافق أو يرفض المستخدم بعد
+        document.getElementById('notify-btn').style.display = 'block';
+    }
+}
+
+// دالة طلب صلاحية الإشعارات المرتبطة بالزر
+function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        alert('متصفحك لا يدعم الإشعارات.');
+        return;
+    }
+
+    Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+            document.getElementById('notify-btn').style.display = 'none';
+            alert('تم تفعيل الإشعارات بنجاح!');
+            // سيتم وضع كود الاشتراك في خدمة الـ Push لاحقاً هنا
+        } else {
+            alert('تم رفض الإشعارات. يمكنك تفعيلها لاحقاً من إعدادات المتصفح.');
+        }
+    });
+}
