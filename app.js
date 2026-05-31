@@ -1,14 +1,12 @@
 const SUPABASE_URL = 'https://hqscfwwaznpqhshuujmo.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_6otq5jDEKMoy-d7VWcB11w_3lr4FEe5';
-
-// تغيير اسم المتغير لتجنب التعارض مع مكتبة الـ CDN
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 window.onload = () => {
     fetchData();
+    // جلب تلقائي كل 10 ثوانٍ لتحديث البطاقات الرئيسية والسجل القصير
     setInterval(fetchData, 10000);
     
-    // تسجيل الـ Service Worker لتفعيل خصائص الـ PWA والإشعارات لاحقاً
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js')
             .then(() => console.log('تم تسجيل Service Worker بنجاح'))
@@ -16,9 +14,9 @@ window.onload = () => {
     }
 };
 
+// 1. وظيفة الجلب المستمر للبطاقات الرئيسية وآخر 5 أحداث
 async function fetchData() {
     try {
-        // جلب حالة الكهرباء الحالية
         const { data: deviceData } = await supabaseClient
             .from('device_status')
             .select('*')
@@ -36,7 +34,6 @@ async function fetchData() {
             }
         }
 
-        // جلب آخر حالة للباب
         const { data: doorData } = await supabaseClient
             .from('door_logs')
             .select('*')
@@ -54,7 +51,6 @@ async function fetchData() {
             }
         }
 
-        // جلب سجل الأحداث التاريخي (آخر 5 أحداث)
         const { data: logs } = await supabaseClient
             .from('door_logs')
             .select('*')
@@ -68,7 +64,6 @@ async function fetchData() {
             logs.forEach(log => {
                 const li = document.createElement('li');
                 const actionText = log.action === 'opened' ? 'تم فتح الباب 🚪' : 'تم إغلاق الباب 🔒';
-                
                 const eventTime = new Date(log.logged_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
                 const eventDate = new Date(log.logged_at).toLocaleDateString('ar-SA', { month: 'numeric', day: 'numeric' });
 
@@ -80,6 +75,61 @@ async function fetchData() {
         }
 
     } catch (err) {
-        console.error("خطأ في جلب البيانات:", err);
+        console.error("خطأ في جلب البيانات الدورية:", err);
+    }
+}
+
+// 2. وظيفة جلب وعرض القراءات الكاملة داخل الجدول التاريخي عند الضغط على الأزرار
+async function viewFullHistory(type) {
+    const historySection = document.getElementById('history-section');
+    const historyTitle = document.getElementById('history-title');
+    const tableBody = document.getElementById('history-table-body');
+    
+    // إظهار قسم السجل وتجهيز شاشة الانتظار
+    historySection.classList.remove('hidden');
+    tableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:10px;">جاري تحميل السجل الكامل...</td></tr>';
+
+    // تحديد الجدول المستهدف بناءً على نوع الزر المكبوس
+    const tableName = type === 'door' ? 'door_logs' : 'power_logs';
+    historyTitle.textContent = type === 'door' ? 'سجل حركة الباب الكامل 🚪' : 'سجل حالات الكهرباء الكامل ⚡';
+
+    try {
+        // جلب جميع البيانات مرتبة من الأحدث إلى الأقدم
+        const { data, error } = await supabaseClient
+            .from(tableName)
+            .select('*')
+            .order('logged_at', { ascending: false });
+
+        if (error) throw error;
+
+        tableBody.innerHTML = '';
+        
+        if (data && data.length > 0) {
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                let detailText = '';
+
+                // صياغة النص بناءً على نوع البيانات المجلوبة
+                if (type === 'door') {
+                    detailText = row.action === 'opened' ? 'تم فتح الباب 🚪' : 'تم إغلاق الباب 🔒';
+                } else {
+                    detailText = row.event_type === 'power_loss' ? 'تأكيد انقطاع تيار الكهرباء/الشبكة ❌' : 'تأكيد عودة تيار الكهرباء/الشبكة ⚡';
+                }
+
+                const eventTime = new Date(row.logged_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+                const eventDate = new Date(row.logged_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                tr.innerHTML = `
+                    <td><b>${detailText}</b></td>
+                    <td class="time">${eventDate} في ${eventTime}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:10px;">لا توجد سجلات محفوظة في هذا الجدول بعد.</td></tr>';
+        }
+    } catch (err) {
+        console.error("خطأ في تحميل السجل التاريخي الكامل:", err);
+        tableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:10px; color:red;">فشل جلب البيانات، تحقق من تفعيل RLS للجدول.</td></tr>';
     }
 }
