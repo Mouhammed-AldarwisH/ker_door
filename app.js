@@ -137,9 +137,22 @@ async function viewFullHistory(type) {
     }
 }
 
+// دالة تحويل المفتاح (مطلوبة لعملية التشفير في المتصفح)
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// دالة طلب الصلاحية والاشتراك
 function requestNotificationPermission() {
     if (!('Notification' in window)) {
-        alert('متصفحك الحالي لا يدعم الإشعارات. تأكد من تحديث نظام الآيفون إلى 16.4 أو أحدث، وأضف الموقع للشاشة الرئيسية.');
+        alert('متصفحك الحالي لا يدعم الإشعارات.');
         return;
     }
 
@@ -147,14 +160,43 @@ function requestNotificationPermission() {
     const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 
     if (isIOS && !isStandalone) {
-        alert('ملاحظة أمنية من Apple: لتفعيل الإشعارات، يجب عليك الضغط على زر "مشاركة" بالأسفل واختيار "إضافة إلى الشاشة الرئيسية" (Add to Home Screen)، ثم افتح التطبيق من الشاشة لتفعيل الإشعارات.');
+        alert('ملاحظة من Apple: لتفعيل الإشعارات، يجب الضغط على زر "مشاركة" بالأسفل واختيار "إضافة إلى الشاشة الرئيسية"، ثم افتح التطبيق من الشاشة لتفعيلها.');
         return;
     }
 
-    Notification.requestPermission().then(permission => {
+    Notification.requestPermission().then(async permission => {
         if (permission === 'granted') {
             document.getElementById('notify-btn').style.display = 'none';
-            alert('تم تفعيل الإشعارات بنجاح!');
+            
+            try {
+                // تسجيل الاشتراك في Service Worker باستخدام المفتاح العام
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array('BBRtqoIoD3KMN7uSVxwRc4O_oa3pONvSmOF0Vr8g4GwcgngU7L1ITmBDOweadzz2YixeIYDcKe5dXlGzCXmhzYE') // ضع المفتاح العام هنا
+                });
+
+                // استخراج بيانات الاشتراك
+                const subData = JSON.parse(JSON.stringify(subscription));
+
+                // إرسال بيانات جوالك لقاعدة البيانات
+                const { error } = await supabaseClient
+                    .from('push_subscriptions')
+                    .insert([{
+                        endpoint: subData.endpoint,
+                        auth: subData.keys.auth,
+                        p256dh: subData.keys.p256dh
+                    }]);
+
+                if (error) {
+                    // تجاهل الخطأ إذا كان الجوال مسجلاً مسبقاً
+                    if (error.code !== '23505') throw error; 
+                }
+                alert('تم تفعيل الإشعارات وربط جوالك بنجاح!');
+            } catch (err) {
+                console.error('خطأ في تسجيل الإشعارات:', err);
+                alert('حدث خطأ أثناء ربط الإشعارات.');
+            }
         } else {
             alert('تم رفض الإشعارات. يمكنك تفعيلها لاحقاً من إعدادات النظام.');
         }
