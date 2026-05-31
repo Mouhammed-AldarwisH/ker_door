@@ -12,8 +12,10 @@ window.onload = () => {
             .catch(err => console.error('فشل تسجيل Service Worker:', err));
     }
 
-    if ('Notification' in window && Notification.permission === 'default') {
-        document.getElementById('notify-btn').style.display = 'block';
+    // إظهار زر الإشعارات دائماً ما لم تكن الصلاحية ممنوحة بالفعل
+    const notifyBtn = document.getElementById('notify-btn');
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+        notifyBtn.style.display = 'block';
     }
 };
 
@@ -137,7 +139,7 @@ async function viewFullHistory(type) {
 
 function requestNotificationPermission() {
     if (!('Notification' in window)) {
-        alert('متصفحك لا يدعم الإشعارات.');
+        alert('متصفحك الحالي لا يدعم الإشعارات. تأكد من تحديث نظام الآيفون إلى 16.4 أو أحدث، وأضف الموقع للشاشة الرئيسية.');
         return;
     }
 
