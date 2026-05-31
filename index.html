@@ -31,7 +31,31 @@
             -webkit-tap-highlight-color: transparent;
         }
         .container { max-width: 600px; margin: 20px auto; }
-        h2 { text-align: center; font-weight: 700; margin-bottom: 24px; font-size: 24px; }
+        
+        /* تنسيق الهيدر وزر التحديث */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .header h2 { margin: 0; font-size: 24px; font-weight: 700; }
+        .btn-refresh {
+            background: #e5e5ea;
+            border: none;
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            padding: 0;
+            flex: none; /* لمنع الزر من التمدد */
+        }
+        .btn-refresh:active { background: #d1d1d6; }
         
         .status-card { 
             padding: 20px; 
@@ -103,7 +127,10 @@
 <body>
 
 <div class="container">
-    <h2>نظام الاستراحة</h2>
+    <div class="header">
+        <h2>نظام الاستراحة</h2>
+        <button class="btn-refresh" onclick="location.reload()" aria-label="تحديث الصفحة">🔄</button>
+    </div>
 
     <div id="power-status" class="status-card">جاري جلب حالة الكهرباء...</div>
     <div id="door-status" class="status-card">جاري جلب حالة الباب...</div>
