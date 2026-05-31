@@ -62,7 +62,14 @@
         <li>جاري تحميل السجل السريع...</li>
     </ul>
 </div>
+<div class="btn-group">
+        <button class="btn-nav" onclick="viewFullHistory('door')">سجل حركة الباب الكامل</button>
+        <button class="btn-nav" onclick="viewFullHistory('power')" style="background: #28a745;">سجل حالات الكهرباء الكامل</button>
+    </div>
 
+    <button id="notify-btn" onclick="requestNotificationPermission()" style="width: 100%; padding: 12px; background: #ffc107; color: black; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: bold; margin-top: 15px; display: none;">
+        تفعيل الإشعارات 🔔
+    </button>
 <script src="app.js"></script>
 </body>
 </html>
