@@ -1,19 +1,25 @@
 const SUPABASE_URL = 'https://hqscfwwaznpqhshuujmo.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_6otq5jDEKMoy-d7VWcB11w_3lr4FEe5';
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// تغيير اسم المتغير لتجنب التعارض مع مكتبة الـ CDN
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// تشغيل الجلب التلقائي بمجرد فتح الصفحة
 window.onload = () => {
     fetchData();
-    // إعادة جلب البيانات تلقائياً كل 10 ثوانٍ لتحديث الحالة أمام الأهل بشكل مستمر
     setInterval(fetchData, 10000);
+    
+    // تسجيل الـ Service Worker لتفعيل خصائص الـ PWA والإشعارات لاحقاً
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(() => console.log('تم تسجيل Service Worker بنجاح'))
+            .catch(err => console.error('فشل تسجيل Service Worker:', err));
+    }
 };
 
 async function fetchData() {
     try {
-        // 1. جلب حالة الكهرباء الحالية
-        const { data: deviceData } = await supabase
+        // جلب حالة الكهرباء الحالية
+        const { data: deviceData } = await supabaseClient
             .from('device_status')
             .select('*')
             .eq('id', 'esp32_gate')
@@ -30,8 +36,8 @@ async function fetchData() {
             }
         }
 
-        // 2. جلب آخر حالة للباب
-        const { data: doorData } = await supabase
+        // جلب آخر حالة للباب
+        const { data: doorData } = await supabaseClient
             .from('door_logs')
             .select('*')
             .order('logged_at', { ascending: false })
@@ -48,8 +54,8 @@ async function fetchData() {
             }
         }
 
-        // 3. جلب سجل الأحداث التاريخي (آخر 5 أحداث للباب)
-        const { data: logs } = await supabase
+        // جلب سجل الأحداث التاريخي (آخر 5 أحداث)
+        const { data: logs } = await supabaseClient
             .from('door_logs')
             .select('*')
             .order('logged_at', { ascending: false })
@@ -63,7 +69,6 @@ async function fetchData() {
                 const li = document.createElement('li');
                 const actionText = log.action === 'opened' ? 'تم فتح الباب 🚪' : 'تم إغلاق الباب 🔒';
                 
-                // تحويل الوقت لصيغة محلية مقروءة
                 const eventTime = new Date(log.logged_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
                 const eventDate = new Date(log.logged_at).toLocaleDateString('ar-SA', { month: 'numeric', day: 'numeric' });
 
